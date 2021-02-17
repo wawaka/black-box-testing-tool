@@ -1,0 +1,27 @@
+name: just a config with demo functions
+functions:
+    eval: eval(arg)
+    hbase_timestamp: struct.pack('!I', int(dateutil.parser.parse(arg).timestamp())) # struct will be imported automatically
+    timestamp:
+        imports: # in case you want to make it explicit
+            - dateutil
+        code: int(dateutil.parser.parse(arg).timestamp())
+    timestamp_ms:
+        imports: # in case you want to make it explicit
+            - dateutil
+        code: int(dateutil.parser.parse(arg).timestamp()) * 1000
+actions:
+    print:
+        type: print
+tests:
+-   name: fake test with print action
+    actions:
+    -   action: print
+        test_eval:
+            $eval: 1 + 3**2
+        test_timestamp:
+            $timestamp: 2021-01-10 23:59:59 +0700
+        test_timestamp_ms:
+            $timestamp_ms: 2021-01-10 23:59:59 +0700
+        test_hbase_timestamp:
+            $hbase_timestamp: 2021-01-10 23:59:59 +0700

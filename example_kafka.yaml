@@ -1,0 +1,33 @@
+name: just a test configuration file
+actions:
+    send_orders:
+        type: kafka_send
+        brokers: localhost:9092
+        topic: test_topic
+        template_file: example_order_template.json
+        template: {field: value}
+    check_orders:
+        type: kafka_check
+        brokers: localhost:9092
+        topic: test_topic
+        template_file: example_order_template.json
+        template: {field: value}
+tests:
+-   name: just a simple test
+    actions:
+    -   action: send_orders
+        messages:
+        -   {"userid": 100, "orderid": 1}
+    -   action: check_orders
+        messages:
+        -   {"userid": 100, "orderid": 1}
+-   name: a more advanced test
+    actions:
+    -   action: send_orders
+        messages:
+        -   {"userid": 100, "orderid": 2}
+        -   {"userid": 200, "orderid": 3}
+    -   action: check_orders
+        messages:
+        -   {"userid": 100, "orderid": 2}
+        -   {"userid": 200, "orderid": 3}

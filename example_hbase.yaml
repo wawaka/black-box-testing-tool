@@ -1,0 +1,23 @@
+name: just a test configuration for hbase
+actions:
+    hbase_account:
+        type: hbase
+        host: localhost
+        table: a_hbase_table
+tests:
+-   name: just a test
+    actions:
+    -   action: hbase_account
+        commands:
+        -   type: put
+            rows:
+                abc: {"f:field": {"$hbase_timestamp": "2021-02-01 10:00:00 +0700"}}
+        -   type: check
+            rows:
+                abc: {"f:field": {"$hbase_timestamp": "2021-02-01 10:00:00 +0700"}}
+        -   type: delete
+            rows:
+            - abc
+        -   type: check
+            rows:
+                abc: null

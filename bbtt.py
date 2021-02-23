@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
 
-import re
-import sys
-import json
-import time
-import struct
-import codecs
 import argparse
-import importlib
+import codecs
 import collections.abc
-
+import importlib
+import json
+import copy
+import re
+import struct
+import sys
+import time
 from pprint import pprint as pp
 
-from dateutil.parser import parse
-from kafka import KafkaConsumer, KafkaProducer
 import easybase
 import yaml
+from dateutil.parser import parse
+from kafka import KafkaConsumer, KafkaProducer
 
 
 FUNCTION_PREFIX = '$'
@@ -69,6 +69,16 @@ def to_json(d):
     return json.dumps(d, sort_keys=True)
 
 
+def format_recursive(fmt, substitutions):
+    if type(fmt) is dict:
+        return {format_recursive(k, substitutions): format_recursive(v, substitutions) for k, v in fmt.items()}
+    if type(fmt) is list:
+        return [format_recursive(e, substitutions) for e in fmt]
+    if type(fmt) is str:
+        return fmt.format(**substitutions)
+    return fmt
+
+
 class KafkaSendAction:
     def __init__(self, **kwargs):
         self.producer = KafkaProducer(bootstrap_servers=kwargs['brokers'])
@@ -78,27 +88,15 @@ class KafkaSendAction:
 
     def serialize_object(self, obj):
         if self.format:
-            obj = self.format_object(self.format, obj)
+            obj = format_recursive(self.format, obj)
         return to_json(obj).encode('utf8')
-
-    @classmethod
-    def format_string(cls, fmt, obj):
-        return fmt.format(**obj)
-
-    @classmethod
-    def format_object(cls, fmt, obj):
-        out = {}
-        for fk, fv in fmt.items():
-            k = cls.format_string(fk, obj) if type(fk) is str else fk
-            v = cls.format_string(fv, obj) if type(fv) is str else fv
-            out[k] = v
-        return out
 
     def exec(self, kwargs):
         for msg in kwargs['messages']:
             obj = self.template | msg
             value = self.serialize_object(obj)
             self.producer.send(self.topic, value=value)
+            # print(value)
         print(f"\t⏩\tsent {len(kwargs['messages'])} messages")
 
 
@@ -135,6 +133,14 @@ class PrintAction:
 
     def exec(self, kwargs):
         print(f"\t{kwargs!r}")
+
+
+class PPrintAction:
+    def __init__(self, **kwargs):
+        self.kwargs = kwargs
+
+    def exec(self, kwargs):
+        pp(kwargs)
 
 
 class SleepAction:
@@ -211,6 +217,7 @@ class HBaseAction:
 ACTIONS = {
     'sleep': SleepAction,
     'print': PrintAction,
+    'pprint': PPrintAction,
     'hbase': HBaseAction,
     'kafka_send': KafkaSendAction,
     'kafka_check': KafkaCheckAction,
@@ -233,7 +240,8 @@ def init_actions(actions_config):
 
 
 def run_test_config(config, args):
-    print(f"running test config {config['name']!r}")
+    if 'name' in config:
+        print(f"running test config {config['name']!r}")
 
     actions = init_actions(config['actions'])
 
@@ -242,7 +250,7 @@ def run_test_config(config, args):
             pass
             # print(f"#{i} skipping test {test['name']!r}")
         else:
-            print(f"#{i} running test {test['name']!r}")
+            print(f"#{i} running test {test.get('name')!r}")
 
             for i_action, test_action in enumerate(test['actions'], 1):
                 test_action_name = test_action['action']
@@ -256,47 +264,110 @@ def run_test_config(config, args):
 
 
 class Function:
-    def __init__(self, value):
-        kwargs = value if type(value) is dict else {'code': value}
-        self.code = kwargs['code']
-        self.imports = {name: importlib.import_module(name) for name in kwargs.get('imports', [])}
+    @staticmethod
+    def init(name, value):
+        if type(value) is str:
+            lines = value.splitlines()
+            if len(lines) > 1:
+                return ExecFunction(name, value)
+        return EvalFunction(name, value)
 
-    def __call__(self, args, kwargs):
-        env = {'arg': args[0], 'args': args} | self.imports
-        f_globals = env
-        f_locals = env
+
+class EvalFunction(Function):
+    def __init__(self, name, value):
+        self.code = value
+        self.imports = {}
+
+    def __call__(self, value):
+        f_globals = self.imports
+        f_locals = value if type(value) is dict else {'arg': value}
         try:
             rc = eval(self.code, f_globals, f_locals)
         except NameError as e:
             missing_name = re.findall("name '(\w+)' is not defined", str(e))[0]
             self.imports[missing_name] = importlib.import_module(missing_name)
-            return self(args, kwargs)
+            return self(value)
+        except Exception as e:
+            print(f"Exception while evaluating code {self.code!r}: {e}")
+            # print(f"{f_globals=}")
+            print(f"{f_locals=}")
+            raise
 
         return rc
+
+
+class ExecFunction:
+    @staticmethod
+    def fake_import(_code):
+        exec(_code)
+        del _code
+        return locals()
+
+    def __init__(self, name, value):
+        self.function = self.fake_import(value)[name]
+
+    def __call__(self, value):
+        if type(value) is dict:
+            return self.function(**value)
+        if type(value) is list:
+            return self.function(*value)
+        return self.function(value)
 
 
 def init_functions(config):
     functions = {}
     for f_name, f_value in config.items():
-        functions[f_name] = Function(f_value)
+        functions[f_name] = Function.init(f_name, f_value)
     return functions
 
 
-def evaluate_functions(functions, value):
+def setattr_recursive(obj, d):
+    for k, v in d.items():
+        if type(v) is dict:
+            subobj = getattr(obj, k)
+            setattr_recursive(subobj, v)
+        elif type(v) is list:
+            for e in v:
+                subobj = getattr(obj, k).add()
+                setattr_recursive(subobj, e)
+        else:
+            setattr(obj, k, v)
+
+
+def function_protobuf(pb_module_name, pb_class_name, pb_fields):
+    import importlib
+    pb_module = importlib.import_module(pb_module_name)
+
+    pb_class = getattr(pb_module, pb_class_name)
+    pb_obj = pb_class()
+    setattr_recursive(pb_obj, pb_fields)
+
+    return pb_obj.SerializeToString()
+
+
+def evaluate_functions(value, functions):
     if type(value) is list:
-        return [evaluate_functions(functions, v) for v in value]
+        return [evaluate_functions(v, functions) for v in value]
 
     if type(value) is dict:
         for k in value:
+            if k == f'{FUNCTION_PREFIX}const':
+                return CONSTANTS[value[k]]
+
+        value = {k: evaluate_functions(v, functions) for k, v in value.items()}
+
+        for k in value:
+            if k == f'{FUNCTION_PREFIX}protobuf':
+                return function_protobuf(**value[k])
+
             if k.startswith(FUNCTION_PREFIX):
                 f_name = k[len(FUNCTION_PREFIX):]
                 function = functions[f_name]
-                args = value[k]
-                if type(args) is not list:
-                    args = [args]
-                return function(args, value)
-
-        return {k: evaluate_functions(functions, v) for k, v in value.items()}
+                try:
+                    return function(value[k])
+                except Exception as e:
+                    print(f"Exception while calling {value}: {e}")
+                    raise
 
     return value
 
@@ -318,8 +389,13 @@ def main(args):
     # pp(config)
 
     functions = init_functions(config.get('functions', {}))
-    config = evaluate_functions(functions, config)
+    global CONSTANTS
+    CONSTANTS = evaluate_functions(config.get('constants', {}), functions)
+    pp(CONSTANTS)
+
+    config = evaluate_functions(config, functions)
     # pp(config)
+
     run_test_config(config, args)
 
 

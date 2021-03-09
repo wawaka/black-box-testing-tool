@@ -2,7 +2,7 @@
 
 import sys
 
-assert sys.version_info >= (3, 6), "you must use Python >= 3.6"
+assert sys.version_info >= (3, 9), "you must use Python >= 3.9"
 
 import argparse
 import codecs

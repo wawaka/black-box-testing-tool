@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+import sys
+
+assert sys.version_info >= (3, 6), "you must use Python >= 3.6"
+
 import argparse
 import codecs
 import collections.abc
@@ -8,7 +12,6 @@ import json
 import copy
 import re
 import struct
-import sys
 import time
 from pprint import pprint as pp
 
@@ -290,7 +293,7 @@ class EvalFunction(Function):
         except Exception as e:
             print(f"Exception while evaluating code {self.code!r}: {e}")
             # print(f"{f_globals=}")
-            print(f"{f_locals=}")
+            # print(f"{f_locals=}")
             raise
 
         return rc

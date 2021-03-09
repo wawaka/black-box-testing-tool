@@ -394,7 +394,7 @@ def main(args):
     functions = init_functions(config.get('functions', {}))
     global CONSTANTS
     CONSTANTS = evaluate_functions(config.get('constants', {}), functions)
-    pp(CONSTANTS)
+    # pp(CONSTANTS)
 
     config = evaluate_functions(config, functions)
     # pp(config)

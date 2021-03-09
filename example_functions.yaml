@@ -6,7 +6,7 @@ functions:
     hbase_timestamp: struct.pack('!I', int(dateutil.parser.parse(arg).timestamp()))
     timestamp: int(dateutil.parser.parse(arg).timestamp())
     timestamp_ms: int(dateutil.parser.parse(arg).timestamp()) * 1000
-    hex: binascii.b2a_hex(bytes(arg, 'ascii') if type(arg) is str else arg)
+    hex: binascii.b2a_hex(arg.encode('utf8') if type(arg) is str else arg).decode('ascii')
     unhex: binascii.a2b_hex(arg)
     randint: random.randint(min, max)
     now: int(time.time()) + arg

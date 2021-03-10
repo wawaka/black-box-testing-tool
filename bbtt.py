@@ -175,6 +175,8 @@ class HBaseValueProxy:
         return self.v == arg.v
 
     def __repr__(self):
+        if self.v is None:
+            return 'missing'
         return repr(self.v)
 
 def convert_vs(vs):
@@ -189,15 +191,18 @@ class HBaseAction:
         for cmd in kwargs['commands']:
             if cmd['type'] == 'put':
                 for rowkey, vs in cmd['rows'].items():
+                    print(f"\t>>>> executing command {cmd['type']!r} for row {rowkey!r}")
                     value = convert_vs(vs)
                     self.htable.put(rowkey, value)
                     print(f"\t💾\tput {rowkey!r} {value!r}")
             elif cmd['type'] == 'delete':
                 for rowkey in cmd['rows']:
+                    print(f"\t>>>> executing command {cmd['type']!r} for row {rowkey!r}")
                     self.htable.delete(rowkey)
                     print(f"\t🗑\tdeleted {rowkey!r}")
             elif cmd['type'] == 'check':
                 for rowkey, vs in cmd['rows'].items():
+                    print(f"\t>>>> executing command {cmd['type']!r} for row {rowkey!r}")
                     if vs is None:
                         row = self.htable.row(rowkey)
                         if not row:
@@ -216,7 +221,7 @@ class HBaseAction:
                                     print(f"\t❌\trow {rowkey!r}: key {k!r} has value {actual_value!r} (expected {expected_value!r})")
                             else:
                                 if v is None:
-                                    print(f"\t✅\trow {rowkey!r}: key {k!r} is missing (expected missing)")
+                                    print(f"\t✅\trow {rowkey!r}: key {k!r} is missing (expected {expected_value!r})")
                                 else:
                                     print(f"\t❌\trow {rowkey!r}: key {k!r} is missing (expected {expected_value!r})")
 

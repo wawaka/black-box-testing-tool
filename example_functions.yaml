@@ -1,4 +1,5 @@
 name: just a config with demo functions
+
 functions:
     eval: eval(arg)
     print: print(arg['a'], arg['b'], arg['c'])

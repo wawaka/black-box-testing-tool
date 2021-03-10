@@ -162,6 +162,8 @@ class HBaseValueProxy:
             self.v = v.encode()
         elif isinstance(v, bytes):
             self.v = v
+        elif v is None:
+            self.v = v
         else:
             raise Exception(f"unexpected value {v}")
 
@@ -209,12 +211,14 @@ class HBaseAction:
                             if k in row:
                                 actual_value = HBaseValueProxy(row[k])
                                 if actual_value == expected_value:
-                                    pass
                                     print(f"\t✅\trow {rowkey!r}: key {k!r} has value {actual_value!r} (expected {expected_value!r})")
                                 else:
                                     print(f"\t❌\trow {rowkey!r}: key {k!r} has value {actual_value!r} (expected {expected_value!r})")
                             else:
-                                print(f"\t❌\trow {rowkey!r}: key {k!r} is missing (expected {expected_value!r})")
+                                if v is None:
+                                    print(f"\t✅\trow {rowkey!r}: key {k!r} is missing (expected missing)")
+                                else:
+                                    print(f"\t❌\trow {rowkey!r}: key {k!r} is missing (expected {expected_value!r})")
 
 
 ACTIONS = {

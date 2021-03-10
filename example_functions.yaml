@@ -1,18 +1,21 @@
 name: just a config with demo functions
 functions:
     eval: eval(arg)
-    print: print(a, b, c)
+    print: print(arg['a'], arg['b'], arg['c'])
     str: str(arg)
     hbase_timestamp: struct.pack('!I', int(dateutil.parser.parse(arg).timestamp()))
     timestamp: int(dateutil.parser.parse(arg).timestamp())
     timestamp_ms: int(dateutil.parser.parse(arg).timestamp()) * 1000
     hex: binascii.b2a_hex(arg.encode('utf8') if type(arg) is str else arg).decode('ascii')
     unhex: binascii.a2b_hex(arg)
-    randint: random.randint(min, max)
+    randint: random.randint(arg[0], arg[1])
     now: int(time.time()) + arg
+    md5PrefixKeys: "{f'{hashlib.md5(k.encode()).hexdigest()[:2].lower()}:{k}': v for k, v in arg.items()}"
+
 actions:
     print:
         type: pprint
+
 tests:
 -   name: fake test with print action
     actions:
@@ -24,6 +27,8 @@ tests:
                 a: A
                 b: B
                 c: C
+        test_randint:
+            $randint: [100, 999]
         test_hex:
             $hex: hello
         test_hex_unhex:
@@ -35,3 +40,7 @@ tests:
             $timestamp_ms: 2021-01-10 23:59:59 +0700
         test_hbase_timestamp:
             $hbase_timestamp: 2021-01-10 23:59:59 +0700
+        test_md5_prefix:
+            $md5PrefixKeys:
+                "123": {"k1": "v1", "k2": "v2"}
+                "456": {"k1": "v1", "k2": "v2"}

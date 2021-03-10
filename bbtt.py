@@ -283,7 +283,7 @@ class EvalFunction(Function):
 
     def __call__(self, value):
         f_globals = self.imports
-        f_locals = value if type(value) is dict else {'arg': value}
+        f_locals = {'arg': value}
         try:
             rc = eval(self.code, f_globals, f_locals)
         except NameError as e:

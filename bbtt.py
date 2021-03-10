@@ -179,8 +179,6 @@ class HBaseValueProxy:
             return 'missing'
         return repr(self.v)
 
-def convert_vs(vs):
-    return {k: HBaseValueProxy(v) for k, v in vs.items()}
 
 class HBaseAction:
     def __init__(self, **kwargs):
@@ -192,14 +190,26 @@ class HBaseAction:
             if cmd['type'] == 'put':
                 for rowkey, vs in cmd['rows'].items():
                     print(f"\t>>>> executing command {cmd['type']!r} for row {rowkey!r}")
-                    value = convert_vs(vs)
-                    self.htable.put(rowkey, value)
-                    print(f"\t💾\tput {rowkey!r} {value!r}")
-            elif cmd['type'] == 'delete':
-                for rowkey in cmd['rows']:
-                    print(f"\t>>>> executing command {cmd['type']!r} for row {rowkey!r}")
-                    self.htable.delete(rowkey)
-                    print(f"\t🗑\tdeleted {rowkey!r}")
+                    if vs is None:
+                        self.htable.delete(rowkey)
+                        print(f"\t🗑\trow {rowkey!r} deleted")
+                    else:
+                        to_put = {}
+                        to_delete = []
+                        for k, v in vs.items():
+                            if v is None:
+                                to_delete.append(k)
+                            else:
+                                to_put[k] = HBaseValueProxy(v)
+
+                        if to_delete:
+                            self.htable.delete(rowkey, to_delete)
+                            print(f"\t🗑\trow {rowkey!r} deleted: {to_delete!r}")
+
+                        if to_put:
+                            self.htable.put(rowkey, to_put)
+                            print(f"\t💾\trow {rowkey!r} put: {to_put!r}")
+
             elif cmd['type'] == 'check':
                 for rowkey, vs in cmd['rows'].items():
                     print(f"\t>>>> executing command {cmd['type']!r} for row {rowkey!r}")
@@ -225,6 +235,14 @@ class HBaseAction:
                                 else:
                                     print(f"\t❌\trow {rowkey!r}: key {k!r} is missing (expected {expected_value!r})")
 
+            elif cmd['type'] == 'delete':
+                for rowkey in cmd['rows']:
+                    print(f"\t>>>> executing command {cmd['type']!r} for row {rowkey!r}")
+                    self.htable.delete(rowkey)
+                    print(f"\t🗑\trow {rowkey!r} deleted")
+
+            else:
+                raise Exception(f"unexpected command type {cmd['type']}")
 
 ACTIONS = {
     'sleep': SleepAction,

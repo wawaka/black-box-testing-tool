@@ -45,6 +45,8 @@ tests:
         -   {"userid": 200, "orderid": 2}
 ```
 
+More kafka examples are available in file [examples/kafka.yaml](examples/kafka.yaml)
+
 ## Hbase support
 The tool supports modifications and checking of data in hbase.
 In order for it to work you have to enable thrift2 api in your hbase: `hbase thrift2`
@@ -75,6 +77,8 @@ tests:
             - user2
 ```
 
+More hbase examples are available in file [examples/hbase.yaml](examples/hbase.yaml)
+
 ## Functions
 Functions allow to define and evaluate arbitrary python code with parameters.
 You have to define them in `functions` section of your configuration file:
@@ -99,7 +103,7 @@ tests:
         test_square: {$square: 9} # will be replaced with 81
         test_cube: {$cube: 5} # will be replaced with 125
 ```
-Some useful functions are available in the [example configuration file](example_functions.yaml)
+Some useful functions are available in [examples/functions.yaml](examples/functions.yaml)
 
 ## kafka template, template file
 ## kafka custom format

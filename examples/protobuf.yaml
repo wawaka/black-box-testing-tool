@@ -1,0 +1,23 @@
+actions:
+    print:
+        type: pprint
+tests:
+-   actions:
+    -   action: print
+        test_protobuf:
+            $protobuf: 
+                pb_module_name: addressbook_pb2
+                pb_class_name: AddressBook
+                pb_fields:
+                    people:
+                    -   id: 1
+                        name: Barack Obama
+                        email: obama@whitehouse.gov
+                        phones:
+                        -   number: "123"
+                        -   number: "456"
+                    -   id: 2
+                        name: Donald Trump
+                        email: trump@whitehouse.gov
+                        phones:
+                        -   number: "789"

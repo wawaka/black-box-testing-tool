@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
+sys.path.append('.')
 
 assert sys.version_info >= (3, 9), "you must use Python >= 3.9"
 

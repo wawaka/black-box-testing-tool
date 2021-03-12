@@ -11,10 +11,10 @@ tests:
         commands:
         -   type: put
             rows:
-                abc: {"f:field": {"$hbase_timestamp": "2021-02-01 10:00:00 +0700"}}
+                abc: {"f:field": "hello"}
         -   type: check
             rows:
-                abc: {"f:field": {"$hbase_timestamp": "2021-02-01 10:00:00 +0700"}}
+                abc: {"f:field": "hello"}
         -   type: delete
             rows:
             - abc

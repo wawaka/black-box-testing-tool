@@ -1,5 +1,12 @@
 This is a tool for blackbox testing any system using inputs and outputs (kafka and hbase are currently supported)
 
+# Running
+To run a test you have to call the tool and pass paths of all configuration files as command line arguments:
+```shell
+./bbtt.py config1.yaml config2.yaml
+```
+If multiple files are specified, it's contents is merged key-by key, overwriting values from left to right.
+
 # Configuration file
 To make a test you have to write a configuration file in yaml format.
 Configuration file can have many sections but only 2 are required:
@@ -174,5 +181,17 @@ tests:
 ```
 
 ## Protobuf
+To generate protobuf-serialized messages you can use function `$protobuf`.
+It requires to pass an object with 3 fields:
+1. `pb_module_name` for name protobuf python module
+2. `pb_class_name` for name of class
+3. `pb_fields` for dict of fields for this class
+Example:
+```yaml
+$protobuf: 
+    pb_module_name: addressbook_pb2
+    pb_class_name: AddressBook
+    pb_fields: {...}
+```
 
-## split config
+Protobuf example config is available in [examples/protobuf.yaml](examples/protobuf.yaml)

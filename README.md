@@ -23,6 +23,7 @@ The tool supports 2 types of kafka actions:
 1. `kafka_send` - sending json-based messages to any kafka topic(s)
 2. `kafka_check` - reading and checking json-based messages from any kafka topic(s)
 
+Example:
 ```yaml
 actions:
     send_orders:
@@ -46,6 +47,48 @@ tests:
 ```
 
 More kafka examples are available in file [examples/kafka.yaml](examples/kafka.yaml)
+
+## Kafka message template
+Sometimes it's not convenient to specify full message for every test as they can be quite huge but only differ in some fields.
+For this there is template feature. It allows to specify message template for this kafka action. All messages used with this action will override template fields before sending/checking. You have to define template in the `template` key of corresponding kafka action.
+Example:
+```yaml
+actions:
+    send_orders:
+        type: kafka_send
+        brokers: localhost:9092
+        topic: orders
+        template: {address: 1 Wall Street, phone: 1234567890, userid: 0}
+    check_orders:
+        type: kafka_check
+        brokers: localhost:9092
+        topic: orders
+        template: {address: 1 Wall Street, phone: 1234567890, userid: 0}
+tests:
+-   actions:
+    -   action: send_orders
+        messages: # send some messages to a kafka topic
+        -   {userid: 100, orderid: 1} # the actual message sent would be {userid: 100, orderid: 1, address: 1 Wall Street, phone: 1234567890}
+    -   action: check_orders
+        messages: # read messages from the same topic and ensure they are as expected (order does not matter)
+        -   {userid: 100, orderid: 1} # the actual message checked would be {userid: 100, orderid: 1, address: 1 Wall Street, phone: 1234567890}
+```
+
+## Kafka message template file
+If embedding full template message into the configuration file is not an option, you can refer to an external template in a file by using
+option `template_file` of a kafka action.
+Example:
+```yaml
+actions:
+    send_orders:
+        type: kafka_send
+        brokers: localhost:9092
+        topic: orders
+        template_file: order_template.json
+```
+
+## Kafka message format file
+...
 
 ## Hbase support
 The tool supports modifications and checking of data in hbase.
@@ -105,7 +148,23 @@ tests:
 ```
 Some useful functions are available in [examples/functions.yaml](examples/functions.yaml)
 
-## kafka template, template file
-## kafka custom format
-## constants
+## Constants
+Sometimes you want to define test-wide contsants, for example, ids.
+For that, you can use constants. They are defined in `constants` section of a configuration file.
+To use them, you have to use pre-defined function `$const` with constant name as its argument.
+Example:
+```yaml
+constants:
+    userid: 100500
+actions:
+    print:
+        type: pprint
+tests:
+-   actions:
+    -   action: print
+        test_userid: {$const: userid} # will be replaced with 100500
+```
+
+## Protobuf
+
 ## split config

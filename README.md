@@ -1,5 +1,10 @@
 This is a tool for blackbox testing any system using inputs and outputs (kafka and hbase are currently supported)
 
+# Installing
+```shell
+pip3 install --user -r requirements.txt
+```
+
 # Running
 To run a test you have to call the tool and pass paths of all configuration files as command line arguments:
 ```shell

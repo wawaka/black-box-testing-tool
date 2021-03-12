@@ -93,6 +93,10 @@ actions:
 ## Hbase support
 The tool supports modifications and checking of data in hbase.
 In order for it to work you have to enable thrift2 api in your hbase: `hbase thrift2`
+There are 3 commands supported for hbase action type:
+1. `put` - set values for rows and fields
+2. `check` - compare values of rows and fields to expected values
+3. `delete` - delete rows
 ```yaml
 actions:
     users_db:
@@ -152,10 +156,14 @@ Some useful functions are available in [examples/functions.yaml](examples/functi
 Sometimes you want to define test-wide contsants, for example, ids.
 For that, you can use constants. They are defined in `constants` section of a configuration file.
 To use them, you have to use pre-defined function `$const` with constant name as its argument.
+Values for constants can also be results of function evaluation.
 Example:
 ```yaml
+functions:
+    now: int(time.time())
 constants:
     userid: 100500
+    timestamp: {$now: 0} # argument is ignored
 actions:
     print:
         type: pprint

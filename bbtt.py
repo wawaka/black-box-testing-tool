@@ -370,6 +370,8 @@ def setattr_recursive(obj, d):
             elif 'append' in dir_attr_type:
                 for e in v:
                     attr.append(e)
+            else:
+                raise Exception(f"no method to set array data: {obj}={d}")
         else:
             setattr(obj, k, v)
 

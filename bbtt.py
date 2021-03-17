@@ -358,13 +358,18 @@ def init_functions(config):
 
 def setattr_recursive(obj, d):
     for k, v in d.items():
+        attr = getattr(obj, k)
         if type(v) is dict:
-            subobj = getattr(obj, k)
-            setattr_recursive(subobj, v)
+            setattr_recursive(attr, v)
         elif type(v) is list:
-            for e in v:
-                subobj = getattr(obj, k).add()
-                setattr_recursive(subobj, e)
+            attr_type = type(attr)
+            dir_attr_type = dir(attr_type)
+            if 'add' in dir_attr_type:
+                for e in v:
+                    setattr_recursive(attr.add(), e)
+            elif 'append' in dir_attr_type:
+                for e in v:
+                    attr.append(e)
         else:
             setattr(obj, k, v)
 
@@ -415,7 +420,8 @@ def load_configs(paths):
     final_config = {
         'functions': {},
         'constants': {},
-        'actions': {}
+        'actions': {
+        },
     }
     for path in paths:
         config = load_config(path)

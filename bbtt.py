@@ -421,6 +421,16 @@ def load_configs(paths):
         'functions': {},
         'constants': {},
         'actions': {
+            'sleep': {
+                'type': 'sleep',
+                'time': 1,
+            },
+            'print': {
+                'type': 'print',
+            },
+            'pprint': {
+                'type': 'pprint',
+            },
         },
     }
     for path in paths:

@@ -269,6 +269,16 @@ def init_actions(actions_config):
 
     return actions
 
+def run_test(test, actions):
+    for i_action, test_action in enumerate(test['actions'], 1):
+        test_action_name = test_action['action']
+        try:
+            action_runner = actions[test_action_name]
+        except KeyError:
+            raise Exception(f"action {test_action_name!r} has not been defined")
+
+        print(f"executing action {i_action}:{test_action_name}")
+        action_runner.exec(test_action)
 
 def run_test_config(config, args):
     if 'name' in config:
@@ -277,22 +287,16 @@ def run_test_config(config, args):
     actions = init_actions(config['actions'])
 
     for i, test in enumerate(config['tests'], 1):
-        if not(args.test_number is None or args.test_number == i):
-            pass
-            # print(f"#{i} skipping test {test['name']!r}")
-        else:
+        test['loop'] = test.get('loop', 1)
+        while test['loop'] > 0:
+            if not(args.test_number is None or args.test_number == i):
+                break
+
             print(f"#{i} running test {test.get('name')!r}")
 
-            for i_action, test_action in enumerate(test['actions'], 1):
-                test_action_name = test_action['action']
-                try:
-                    action_runner = actions[test_action_name]
-                except KeyError:
-                    raise Exception(f"action {test_action_name!r} has not been defined")
+            run_test(test, actions)
 
-                print(f"executing action {i_action}:{test_action_name}")
-                action_runner.exec(test_action)
-
+            test['loop'] -= 1
 
 class Function:
     @staticmethod

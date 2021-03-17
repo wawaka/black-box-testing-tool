@@ -280,7 +280,7 @@ def run_test(test, actions):
         print(f"executing action {i_action}:{test_action_name}")
         action_runner.exec(test_action)
 
-def run_test_config(config, args):
+def run_test_config(config, functions, args):
     if 'name' in config:
         print(f"running test config {config['name']!r}")
 
@@ -294,7 +294,7 @@ def run_test_config(config, args):
 
             print(f"#{i} running test {test.get('name')!r}")
 
-            run_test(test, actions)
+            run_test(evaluate_functions(test, functions), actions)
 
             test['loop'] -= 1
 
@@ -412,7 +412,11 @@ def load_config(path):
 
 
 def load_configs(paths):
-    final_config = {}
+    final_config = {
+        'functions': {},
+        'constants': {},
+        'actions': {}
+    }
     for path in paths:
         config = load_config(path)
         final_config = update(final_config, config)
@@ -423,15 +427,15 @@ def main(args):
     config = load_configs(args.config_files)
     # pp(config)
 
-    functions = init_functions(config.get('functions', {}))
+    functions = init_functions(config['functions'])
     global CONSTANTS
-    CONSTANTS = evaluate_functions(config.get('constants', {}), functions)
+    CONSTANTS = evaluate_functions(config['constants'], functions)
     # pp(CONSTANTS)
 
-    config = evaluate_functions(config, functions)
+    # config = evaluate_functions(config, functions)
     # pp(config)
 
-    run_test_config(config, args)
+    run_test_config(config, functions, args)
 
 
 if __name__ == "__main__":

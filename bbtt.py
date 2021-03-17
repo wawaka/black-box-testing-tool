@@ -87,8 +87,8 @@ class KafkaSendAction:
     def __init__(self, **kwargs):
         self.producer = KafkaProducer(bootstrap_servers=kwargs['brokers'])
         self.topic = kwargs['topic']
-        self.template = (json.load(open(kwargs['template_file'])) if 'template_file' in kwargs else {}) | kwargs.get('template', {})
-        self.format = json.load(open(kwargs['format_file'])) if 'format_file' in kwargs else None
+        self.template = (yaml.full_load(open(kwargs['template_file'])) if 'template_file' in kwargs else {}) | kwargs.get('template', {})
+        self.format = yaml.full_load(open(kwargs['format_file'])) if 'format_file' in kwargs else None
 
     def serialize_object(self, obj):
         if self.format:
@@ -108,7 +108,7 @@ class KafkaCheckAction:
     def __init__(self, **kwargs):
         self.consumer = KafkaConsumer(kwargs['topic'], bootstrap_servers=kwargs['brokers'])
         self.consumer.poll(1000) # without this line consumer does not actually subscribes for topic and does not start track messages
-        self.template = (json.load(open(kwargs['template_file'])) if 'template_file' in kwargs else {}) | kwargs.get('template', {})
+        self.template = (yaml.full_load(open(kwargs['template_file'])) if 'template_file' in kwargs else {}) | kwargs.get('template', {})
         self.consume_timeout = kwargs.get('consume_timeout', 1)
 
     def exec(self, kwargs):

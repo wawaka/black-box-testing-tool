@@ -112,9 +112,8 @@ class KafkaCheckAction:
         self.consume_timeout = kwargs.get('consume_timeout', 1)
 
     def exec(self, kwargs):
-        values = poll_until_empty(self.consumer, int(self.consume_timeout * 1000))
-        received = sorted(values, key=to_json)
-        expected = sorted([self.template | msg for msg in kwargs['messages']], key=to_json)
+        received = poll_until_empty(self.consumer, int(self.consume_timeout * 1000))
+        expected = [self.template | msg for msg in kwargs['messages']]
 
         for ignored_field in kwargs.get('ignore_fields', []):
             for msg in received:
@@ -133,8 +132,11 @@ class KafkaCheckAction:
                 for missing_key in msg.keys() - present_keys:
                     del msg[missing_key]
 
+        received.sort(key=to_json)
+        expected.sort(key=to_json)
+
         if expected == received:
-            print(f"\t✅\treceived {len(values)} messages as expected")
+            print(f"\t✅\treceived {len(received)} messages as expected")
         else:
             print(f"\t❌\tmessages received are different from what was expected")
 

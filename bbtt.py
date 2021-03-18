@@ -118,15 +118,11 @@ class KafkaCheckAction:
 
         for ignored_field in kwargs.get('ignore_fields', []):
             for msg in received:
-                try:
+                if ignored_field in msg:
                     del msg[ignored_field]
-                except KeyError:
-                    pass
             for msg in expected:
-                try:
+                if ignored_field in msg:
                     del msg[ignored_field]
-                except KeyError:
-                    pass
 
         if kwargs.get('ignore_missing_fields', False):
             present_keys = set()
@@ -135,10 +131,7 @@ class KafkaCheckAction:
 
             for msg in received:
                 for missing_key in msg.keys() - present_keys:
-                    try:
-                        del msg[missing_key]
-                    except KeyError:
-                        pass
+                    del msg[missing_key]
 
         if expected == received:
             print(f"\t✅\treceived {len(values)} messages as expected")

@@ -115,6 +115,19 @@ class KafkaCheckAction:
         values = poll_until_empty(self.consumer, int(self.consume_timeout * 1000))
         received = sorted(values, key=to_json)
         expected = sorted([self.template | msg for msg in kwargs['messages']], key=to_json)
+
+        for ignored_field in kwargs.get('ignore_fields', []):
+            for msg in received:
+                try:
+                    del msg[ignored_field]
+                except KeyError:
+                    pass
+            for msg in expected:
+                try:
+                    del msg[ignored_field]
+                except KeyError:
+                    pass
+
         if expected == received:
             print(f"\t✅\treceived {len(values)} messages as expected")
         else:

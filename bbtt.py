@@ -97,7 +97,7 @@ class KafkaSendAction:
 
     def exec(self, kwargs):
         for msg in kwargs['messages']:
-            obj = self.template | msg
+            obj = update(self.template, msg)
             value = self.serialize_object(obj)
             time.sleep(kwargs.get('delay', 0))
             self.producer.send(self.topic, value=value)

@@ -99,6 +99,7 @@ class KafkaSendAction:
         for msg in kwargs['messages']:
             obj = self.template | msg
             value = self.serialize_object(obj)
+            time.sleep(kwargs.get('delay', 0))
             self.producer.send(self.topic, value=value)
             # print(value)
         print(f"\t⏩\tsent {len(kwargs['messages'])} messages")

@@ -33,6 +33,14 @@ def update(d, u):
             d[k] = v
     return d
 
+
+def merge(*ds):
+    res = {}
+    for d in ds:
+        res = update(res, d)
+    return res
+
+
 def parse_args():
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument(
@@ -45,6 +53,12 @@ def parse_args():
     )
     args = parser.parse_args()
     return args
+
+
+def load_template(kwargs):
+    template_file = yaml.full_load(open(kwargs['template_file'])) if 'template_file' in kwargs else {}
+    template = kwargs.get('template', {})
+    return merge(template_file, template)
 
 
 def dictdiff(d1, d2):
@@ -87,7 +101,7 @@ class KafkaSendAction:
     def __init__(self, **kwargs):
         self.producer = KafkaProducer(bootstrap_servers=kwargs['brokers'])
         self.topic = kwargs['topic']
-        self.template = (yaml.full_load(open(kwargs['template_file'])) if 'template_file' in kwargs else {}) | kwargs.get('template', {})
+        self.template = load_template(kwargs)
         self.format = yaml.full_load(open(kwargs['format_file'])) if 'format_file' in kwargs else None
 
     def serialize_object(self, obj):
@@ -96,8 +110,9 @@ class KafkaSendAction:
         return to_json(obj).encode('utf8')
 
     def exec(self, kwargs):
+        local_template = load_template(kwargs)
         for msg in kwargs['messages']:
-            obj = update(self.template, msg)
+            obj = merge(self.template, local_template, msg)
             value = self.serialize_object(obj)
             time.sleep(kwargs.get('delay', 0))
             self.producer.send(self.topic, value=value)
@@ -109,12 +124,14 @@ class KafkaCheckAction:
     def __init__(self, **kwargs):
         self.consumer = KafkaConsumer(kwargs['topic'], bootstrap_servers=kwargs['brokers'])
         self.consumer.poll(1000) # without this line consumer does not actually subscribes for topic and does not start track messages
-        self.template = (yaml.full_load(open(kwargs['template_file'])) if 'template_file' in kwargs else {}) | kwargs.get('template', {})
+        self.template = load_template(kwargs)
         self.consume_timeout = kwargs.get('consume_timeout', 1)
 
     def exec(self, kwargs):
+        local_template = load_template(kwargs)
+
         received = poll_until_empty(self.consumer, int(self.consume_timeout * 1000))
-        expected = [self.template | msg for msg in kwargs['messages']]
+        expected = [merge(self.template, local_template, msg) for msg in kwargs['messages']]
 
         for ignored_field in kwargs.get('ignore_fields', []):
             for msg in received:

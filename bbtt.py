@@ -44,8 +44,11 @@ def merge(*ds):
 def parse_args():
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument(
-        '-n', '--test-number',
+        '-t', '--test-number',
         type = int,
+    )
+    parser.add_argument(
+        '-o', '--output',
     )
     parser.add_argument(
         'config_files',
@@ -482,6 +485,9 @@ def load_configs(paths):
 def main(args):
     config = load_configs(args.config_files)
     # pp(config)
+    if args.output:
+        print(f"saving merged config to file {args.output}")
+        yaml.dump(config, open(args.output, 'w'), indent=4)
 
     functions = init_functions(config['functions'])
     global CONSTANTS

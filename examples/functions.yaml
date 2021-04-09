@@ -5,12 +5,16 @@ functions:
     print: print(arg['a'], arg['b'], arg['c'])
     str: str(arg)
     hbase_timestamp: struct.pack('!I', int(dateutil.parser.parse(arg).timestamp()))
+    hbase_uint32: struct.pack('!I', int(arg))
+    hbase_bool: b'\xff' if arg else b'\x00'
     timestamp: int(dateutil.parser.parse(arg).timestamp())
     timestamp_ms: int(dateutil.parser.parse(arg).timestamp()) * 1000
     hex: binascii.b2a_hex(arg.encode('utf8') if type(arg) is str else arg).decode('ascii')
     unhex: binascii.a2b_hex(arg)
     randint: random.randint(arg[0], arg[1])
+    randch: random.choice(arg)
     now: int(time.time()) + arg
+    now_ms: int(time.time() * 1000) + arg
     md5PrefixKeys: "{f'{hashlib.md5(k.encode()).hexdigest()[:2].lower()}:{k}': v for k, v in arg.items()}"
 
 actions:

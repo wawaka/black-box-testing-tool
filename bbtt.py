@@ -160,6 +160,7 @@ class KafkaCheckAction:
             print(f"\t✅\treceived {len(received)} messages as expected")
         else:
             print(f"\t❌\tmessages received are different from what was expected")
+            # raise Exception
 
             print(f"RECEIVED {len(received)} messages:")
             for msg in received:
@@ -311,7 +312,7 @@ def init_actions(actions_config):
     return actions
 
 def run_one_test(config, functions, constants, actions):
-    constants = constants | evaluate_functions(config['constants'], functions, constants)
+    constants = constants | evaluate_functions(config.get('constants', {}), functions, constants)
     config_actions = evaluate_functions(config['actions'], functions, constants)
 
     for i_action, test_action in enumerate(config_actions, 1):

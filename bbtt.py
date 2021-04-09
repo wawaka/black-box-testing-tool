@@ -58,10 +58,10 @@ def parse_args():
     return args
 
 
-def load_template(kwargs):
-    template_file = yaml.full_load(open(kwargs['template_file'])) if 'template_file' in kwargs else {}
-    template = kwargs.get('template', {})
-    return merge(template_file, template)
+def load_defaults(kwargs):
+    defaults_file = yaml.full_load(open(kwargs['defaults_file'])) if 'defaults_file' in kwargs else {}
+    defaults = kwargs.get('defaults', {})
+    return merge(defaults_file, defaults)
 
 
 def dictdiff(d1, d2):
@@ -104,7 +104,7 @@ class KafkaSendAction:
     def __init__(self, **kwargs):
         self.producer = KafkaProducer(bootstrap_servers=kwargs['brokers'])
         self.topic = kwargs['topic']
-        self.template = load_template(kwargs)
+        self.defaults = load_defaults(kwargs)
         self.format = yaml.full_load(open(kwargs['format_file'])) if 'format_file' in kwargs else None
 
     def serialize_object(self, obj):
@@ -113,9 +113,9 @@ class KafkaSendAction:
         return to_json(obj).encode('utf8')
 
     def exec(self, kwargs):
-        local_template = load_template(kwargs)
+        local_defaults = load_defaults(kwargs)
         for msg in kwargs['messages']:
-            obj = merge(self.template, local_template, msg)
+            obj = merge(self.defaults, local_defaults, msg)
             value = self.serialize_object(obj)
             time.sleep(kwargs.get('delay', 0))
             self.producer.send(self.topic, value=value)
@@ -127,14 +127,14 @@ class KafkaCheckAction:
     def __init__(self, **kwargs):
         self.consumer = KafkaConsumer(kwargs['topic'], bootstrap_servers=kwargs['brokers'])
         self.consumer.poll(1000) # without this line consumer does not actually subscribes for topic and does not start track messages
-        self.template = load_template(kwargs)
+        self.defaults = load_defaults(kwargs)
         self.consume_timeout = kwargs.get('consume_timeout', 1)
 
     def exec(self, kwargs):
-        local_template = load_template(kwargs)
+        local_defaults = load_defaults(kwargs)
 
         received = poll_until_empty(self.consumer, int(self.consume_timeout * 1000))
-        expected = [merge(self.template, local_template, msg) for msg in kwargs['messages']]
+        expected = [merge(self.defaults, local_defaults, msg) for msg in kwargs['messages']]
 
         for ignored_field in kwargs.get('ignore_fields', []):
             for msg in received:
@@ -163,12 +163,12 @@ class KafkaCheckAction:
 
             print(f"RECEIVED {len(received)} messages:")
             for msg in received:
-                msg = dictdiff(self.template, msg)
+                msg = dictdiff(self.defaults, msg)
                 print(f"\t❗\t{to_json(msg)}")
 
             print(f"EXPECTED {len(expected)} messages:")
             for msg in expected:
-                msg = dictdiff(self.template, msg)
+                msg = dictdiff(self.defaults, msg)
                 print(f"\t❗\t{to_json(msg)}")
 
 

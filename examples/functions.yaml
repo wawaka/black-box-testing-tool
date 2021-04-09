@@ -17,14 +17,10 @@ functions:
     now_ms: int(time.time() * 1000) + arg
     md5PrefixKeys: "{f'{hashlib.md5(k.encode()).hexdigest()[:2].lower()}:{k}': v for k, v in arg.items()}"
 
-actions:
-    print:
-        type: pprint
-
 tests:
 -   name: fake test with print action
     actions:
-    -   action: print
+    -   action: pprint
         test_eval:
             $eval: 1 + 3**2
         test_print:

@@ -4,14 +4,14 @@ actions:
         type: kafka_send
         brokers: localhost:9092
         topic: test_topic
-        template_file: example_order_template.json
-        template: {field: value}
+        defaults_file: example_order_defaults.json
+        defaults: {field: value}
     check_orders:
         type: kafka_check
         brokers: localhost:9092
         topic: test_topic
-        template_file: example_order_template.json
-        template: {field: value}
+        defaults_file: example_order_defaults.json
+        defaults: {field: value}
 tests:
 -   name: just a simple test
     actions:

@@ -60,9 +60,9 @@ tests:
 
 More kafka examples are available in file [examples/kafka.yaml](examples/kafka.yaml)
 
-## Kafka message template
+## Kafka message defaults
 Sometimes it's not convenient to specify full message for every test as they can be quite huge but only differ in some fields.
-For this there is template feature. It allows to specify message template for this kafka action. All messages used with this action will override template fields before sending/checking. You have to define template in the `template` key of corresponding kafka action.
+For this there is defaults feature. It allows to specify message defaults for this kafka action. All messages used with this action will override defaults fields before sending/checking. You have to define defaults in the `defaults` key of corresponding kafka action.
 Example:
 ```yaml
 actions:
@@ -70,12 +70,12 @@ actions:
         type: kafka_send
         brokers: localhost:9092
         topic: orders
-        template: {address: 1 Wall Street, phone: 1234567890, userid: 0}
+        defaults: {address: 1 Wall Street, phone: 1234567890, userid: 0}
     check_orders:
         type: kafka_check
         brokers: localhost:9092
         topic: orders
-        template: {address: 1 Wall Street, phone: 1234567890, userid: 0}
+        defaults: {address: 1 Wall Street, phone: 1234567890, userid: 0}
 tests:
 -   actions:
     -   action: send_orders
@@ -86,9 +86,9 @@ tests:
         -   {userid: 100, orderid: 1} # the actual message checked would be {userid: 100, orderid: 1, address: 1 Wall Street, phone: 1234567890}
 ```
 
-## Kafka message template file
-If embedding full template message into the configuration file is not an option, you can refer to an external template in a file by using
-option `template_file` of a kafka action.
+## Kafka message defaults file
+If embedding full defaults message into the configuration file is not an option, you can refer to an external defaults in a file by using
+option `defaults_file` of a kafka action.
 Example:
 ```yaml
 actions:
@@ -96,7 +96,7 @@ actions:
         type: kafka_send
         brokers: localhost:9092
         topic: orders
-        template_file: order_template.json
+        defaults_file: order_defaults.json
 ```
 
 ## Kafka message format file

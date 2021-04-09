@@ -310,8 +310,11 @@ def init_actions(actions_config):
 
     return actions
 
-def run_test(test, actions):
-    for i_action, test_action in enumerate(test['actions'], 1):
+def run_one_test(config, functions, constants, actions):
+    constants = constants | evaluate_functions(config['constants'], functions, constants)
+    config_actions = evaluate_functions(config['actions'], functions, constants)
+
+    for i_action, test_action in enumerate(config_actions, 1):
         test_action_name = test_action['action']
         try:
             action_runner = actions[test_action_name]
@@ -322,6 +325,8 @@ def run_test(test, actions):
         action_runner.exec(test_action)
 
 def run_test_config(config, functions, args):
+    constants = evaluate_functions(config['constants'], functions, {})
+
     if 'name' in config:
         print(f"running test config {config['name']!r}")
 
@@ -335,7 +340,7 @@ def run_test_config(config, functions, args):
 
             print(f"#{i} running test {test.get('name')!r}")
 
-            run_test(evaluate_functions(test, functions), actions)
+            run_one_test(test, functions, constants, actions)
 
             test['loop'] -= 1
 
@@ -428,16 +433,16 @@ def function_protobuf(pb_module_name, pb_class_name, pb_fields):
     return pb_obj.SerializeToString()
 
 
-def evaluate_functions(value, functions):
+def evaluate_functions(value, functions, constants):
     if type(value) is list:
-        return [evaluate_functions(v, functions) for v in value]
+        return [evaluate_functions(v, functions, constants) for v in value]
 
     if type(value) is dict:
         for k in value:
             if k == f'{FUNCTION_PREFIX}const':
-                return CONSTANTS[value[k]]
+                return constants[value[k]]
 
-        value = {k: evaluate_functions(v, functions) for k, v in value.items()}
+        value = {k: evaluate_functions(v, functions, constants) for k, v in value.items()}
 
         for k in value:
             if k == f'{FUNCTION_PREFIX}protobuf':
@@ -490,9 +495,6 @@ def main(args):
         yaml.dump(config, open(args.output, 'w'), indent=4)
 
     functions = init_functions(config['functions'])
-    global CONSTANTS
-    CONSTANTS = evaluate_functions(config['constants'], functions)
-    # pp(CONSTANTS)
 
     # config = evaluate_functions(config, functions)
     # pp(config)

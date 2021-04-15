@@ -20,6 +20,7 @@ functions:
     kv2dict: "{x['key']: x['value'] for x in arg}"
     join: "','.join(arg)"
     sec2ms: arg * 1000
+    makeid: int(1000000 * (arg + random.random()))
 
 tests:
 -   name: fake test with print action

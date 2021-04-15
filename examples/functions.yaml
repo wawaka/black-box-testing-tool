@@ -15,7 +15,8 @@ functions:
     randch: random.choice(arg)
     now: int(time.time()) + arg
     now_ms: int(time.time() * 1000) + arg
-    md5PrefixKeys: "{f'{hashlib.md5(k.encode()).hexdigest()[:2].lower()}:{k}': v for k, v in arg.items()}"
+    md5PrefixKeys: "{f'''{hashlib.md5(k.encode()).hexdigest().lstrip('0')[:2].lower()}:{k}''': v for k, v in arg.items()}"
+    # md5PrefixKeys: "{f'{hashlib.md5(k.encode()).hexdigest()[:2].lower()}:{k}': v for k, v in arg.items()}"
     kv2dict: "{x['key']: x['value'] for x in arg}"
     join: "','.join(arg)"
     sec2ms: arg * 1000

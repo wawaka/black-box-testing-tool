@@ -361,15 +361,15 @@ class EvalFunction(Function):
         self.code = value
         self.imports = {}
 
-    def __call__(self, value):
+    def __call__(self, value, context):
         f_globals = self.imports
-        f_locals = {'arg': value}
+        f_locals = context | {'arg': value}
         try:
             rc = eval(self.code, f_globals, f_locals)
         except NameError as e:
             missing_name = re.findall("name '(\w+)' is not defined", str(e))[0]
             self.imports[missing_name] = importlib.import_module(missing_name)
-            return self(value)
+            return self(value, context)
         except Exception as e:
             print(f"Exception while evaluating code {self.code!r}: {e}")
             # print(f"{f_globals=}")
@@ -454,7 +454,7 @@ def evaluate_functions(value, functions, constants):
                 f_name = k[len(FUNCTION_PREFIX):]
                 function = functions[f_name]
                 try:
-                    return function(value[k])
+                    return function(value[k], value)
                 except Exception as e:
                     print(f"Exception while calling {value}: {e}")
                     raise

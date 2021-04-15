@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import sys
 sys.path.append('.')
 
@@ -59,7 +60,7 @@ def parse_args():
 
 
 def load_defaults(kwargs):
-    defaults_file = yaml.full_load(open(kwargs['defaults_file'])) if 'defaults_file' in kwargs else {}
+    defaults_file = yaml.full_load(open(os.path.expanduser(kwargs['defaults_file']))) if 'defaults_file' in kwargs else {}
     defaults = kwargs.get('defaults', {})
     return merge(defaults_file, defaults)
 

@@ -130,11 +130,15 @@ class KafkaCheckAction:
         self.consumer.poll(1000) # without this line consumer does not actually subscribes for topic and does not start track messages
         self.defaults = load_defaults(kwargs)
         self.consume_timeout = kwargs.get('consume_timeout', 1)
+        self.deduplicate = kwargs.get('deduplicate', False)
 
     def exec(self, kwargs):
         local_defaults = load_defaults(kwargs)
 
         received = poll_until_empty(self.consumer, int(self.consume_timeout * 1000))
+        if kwargs.get('deduplicate', self.deduplicate):
+            received_jsons = [to_json(msg) for msg in received]
+            received = [json.loads(s) for s in set(received_jsons)]
         expected = [merge(self.defaults, local_defaults, msg) for msg in kwargs['messages']]
 
         for ignored_field in kwargs.get('ignore_fields', []):

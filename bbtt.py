@@ -120,8 +120,7 @@ class KafkaSendAction:
             value = self.serialize_object(obj)
             time.sleep(kwargs.get('delay', 0))
             self.producer.send(self.topic, value=value)
-            # print(value)
-        print(f"\t⏩\tsent {len(kwargs['messages'])} messages")
+            print(f"\t⏩\tsent message: {to_json(msg)}")
 
 
 class KafkaCheckAction:

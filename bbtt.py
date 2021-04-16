@@ -103,7 +103,7 @@ def format_recursive(fmt, substitutions):
 
 class KafkaSendAction:
     def __init__(self, **kwargs):
-        self.producer = KafkaProducer(bootstrap_servers=kwargs['brokers'])
+        self.producer = KafkaProducer(bootstrap_servers=kwargs['brokers'], **(kwargs.get('kafka_params', {})))
         self.topic = kwargs['topic']
         self.defaults = load_defaults(kwargs)
         self.format = yaml.full_load(open(kwargs['format_file'])) if 'format_file' in kwargs else None
@@ -126,7 +126,7 @@ class KafkaSendAction:
 
 class KafkaCheckAction:
     def __init__(self, **kwargs):
-        self.consumer = KafkaConsumer(kwargs['topic'], bootstrap_servers=kwargs['brokers'])
+        self.consumer = KafkaConsumer(kwargs['topic'], bootstrap_servers=kwargs['brokers'], **(kwargs.get('kafka_params', {})))
         self.consumer.poll(1000) # without this line consumer does not actually subscribes for topic and does not start track messages
         self.defaults = load_defaults(kwargs)
         self.consume_timeout = kwargs.get('consume_timeout', 1)

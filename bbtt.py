@@ -307,7 +307,7 @@ def init_actions(actions_config):
             action_class = ACTIONS[action_type]
         except KeyError:
             raise Exception(f"unexpected action type {action_type}")
-        print(f"initializing action {action_name}...")
+        print(f"initializing action {action_name} ({to_json(action_params)})")
         actions[action_name] = action_class(**action_params)
 
     return actions

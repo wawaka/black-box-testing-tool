@@ -7,6 +7,7 @@ sys.path.append('.')
 assert sys.version_info >= (3, 9), "you must use Python >= 3.9"
 
 import argparse
+import functools
 import codecs
 import collections.abc
 import importlib
@@ -301,54 +302,6 @@ ACTIONS = {
 }
 
 
-def init_actions(actions_config):
-    actions = {}
-
-    for action_name, action_params in actions_config.items():
-        action_type = action_params['type']
-        try:
-            action_class = ACTIONS[action_type]
-        except KeyError:
-            raise Exception(f"unexpected action type {action_type}")
-        print(f"initializing action {action_name} ({to_json(action_params)})")
-        actions[action_name] = action_class(**action_params)
-
-    return actions
-
-def run_one_test(config, functions, constants, actions):
-    constants = constants | evaluate_functions(config.get('constants', {}), functions, constants)
-    config_actions = evaluate_functions(config['actions'], functions, constants)
-
-    for i_action, test_action in enumerate(config_actions, 1):
-        test_action_name = test_action['action']
-        try:
-            action_runner = actions[test_action_name]
-        except KeyError:
-            raise Exception(f"action {test_action_name!r} has not been defined")
-
-        print(f"executing action {i_action}:{test_action_name}")
-        action_runner.exec(test_action)
-
-def run_test_config(config, functions, args):
-    constants = evaluate_functions(config['constants'], functions, {})
-
-    if 'name' in config:
-        print(f"running test config {config['name']!r}")
-
-    actions = init_actions(config['actions'])
-
-    for i, test in enumerate(config['tests'], 1):
-        test['loop'] = test.get('loop', 1)
-        while test['loop'] > 0:
-            if not(args.test_number is None or args.test_number == i):
-                break
-
-            print(f"#{i} running test {test.get('name')!r}")
-
-            run_one_test(test, functions, constants, actions)
-
-            test['loop'] -= 1
-
 class Function:
     @staticmethod
     def init(name, value):
@@ -492,6 +445,68 @@ def load_configs(paths):
     return final_config
 
 
+class BlackBoxTestingTool:
+    def __init__(self, config):
+        self.config = config
+
+    def run(self, args):
+        self.functions = init_functions(self.config.get('functions', {}))
+
+        self.run_tests(args)
+
+    def run_tests(self, args):
+        global_constants = evaluate_functions(self.config.get('constants', {}), self.functions, {})
+
+        if 'name' in self.config:
+            print(f"running test config {config['name']!r}")
+
+        for i, test in enumerate(self.config['tests'], 1):
+            test['loop'] = test.get('loop', 1)
+            while test['loop'] > 0:
+                if not(args.test_number is None or args.test_number == i):
+                    break
+
+                print(f"#{i} running test {test.get('name')!r}")
+
+                self.run_one_test(test, global_constants)
+
+                test['loop'] -= 1
+
+
+    def run_one_test(self, local_config, global_constants):
+        local_constants = evaluate_functions(local_config.get('constants', {}), self.functions, global_constants)
+        merged_constants = global_constants | local_constants
+        local_actions = evaluate_functions(local_config.get('actions', {}), self.functions, merged_constants)
+
+        # pre-load only action handlers we're going to use for the test
+        for test_action in local_actions:
+            self.get_action_handler(test_action['action'])
+
+        for i_action, test_action in enumerate(local_actions, 1):
+            test_action_name = test_action['action']
+            try:
+                action_handler = self.get_action_handler(test_action_name)
+            except KeyError:
+                raise Exception(f"action {test_action_name!r} has not been defined")
+
+            print(f"executing action {i_action}:{test_action_name}")
+            action_handler.exec(test_action)
+
+
+    @functools.cache
+    def get_action_handler(self, name):
+        action_handler_config = self.config['actions'][name]
+
+        action_type = action_handler_config['type']
+        try:
+            action_class = ACTIONS[action_type]
+        except KeyError:
+            raise Exception(f"unexpected action handler type {action_type}")
+
+        print(f"initializing action handler {name!r} ({to_json(action_handler_config)})")
+        return action_class(**action_handler_config)
+
+
 def main(args):
     config = load_configs(args.config_files)
     # pp(config)
@@ -499,12 +514,7 @@ def main(args):
         print(f"saving merged config to file {args.output}")
         yaml.dump(config, open(args.output, 'w'), indent=4)
 
-    functions = init_functions(config['functions'])
-
-    # config = evaluate_functions(config, functions)
-    # pp(config)
-
-    run_test_config(config, functions, args)
+    BlackBoxTestingTool(config).run(args)
 
 
 if __name__ == "__main__":

@@ -458,7 +458,7 @@ class BlackBoxTestingTool:
         global_constants = evaluate_functions(self.config.get('constants', {}), self.functions, {})
 
         if 'name' in self.config:
-            print(f"running test config {config['name']!r}")
+            print(f"running test config {self.config['name']!r}")
 
         for i, test in enumerate(self.config['tests'], 1):
             test['loop'] = test.get('loop', 1)

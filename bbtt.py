@@ -141,7 +141,10 @@ class KafkaCheckAction:
             received = [json.loads(s) for s in set(received_jsons)]
         expected = [merge(self.defaults, local_defaults, msg) for msg in kwargs['messages']]
 
+        ignored_keys = set()
+
         for ignored_field in kwargs.get('ignore_fields', []):
+            ignored_keys.add(ignored_field)
             for msg in received:
                 if ignored_field in msg:
                     del msg[ignored_field]
@@ -150,21 +153,23 @@ class KafkaCheckAction:
                     del msg[ignored_field]
 
         if kwargs.get('ignore_missing_fields', False):
-            present_keys = set()
+            expected_keys = set()
             for msg in expected:
-                present_keys |= msg.keys()
+                expected_keys |= msg.keys()
 
             for msg in received:
-                for missing_key in msg.keys() - present_keys:
-                    del msg[missing_key]
+                for ignored_key in msg.keys() - expected_keys:
+                    del msg[ignored_key]
+                    ignored_keys.add(ignored_key)
 
         received.sort(key=to_json)
         expected.sort(key=to_json)
 
+        ignored_text = f" (ignored fields {ignored_keys})" if ignored_keys else ''
         if expected == received:
-            print(f"\t✅\treceived {len(received)} messages as expected")
+            print(f"\t✅\treceived {len(received)} messages as expected{ignored_text}")
         else:
-            print(f"\t❌\tmessages received are different from what was expected")
+            print(f"\t❌\tmessages received are different from what was expected{ignored_text}")
             # raise Exception
 
             print(f"RECEIVED {len(received)} messages:")

@@ -122,6 +122,7 @@ class KafkaSendAction:
             time.sleep(kwargs.get('delay', 0))
             self.producer.send(self.topic, value=value)
             print(f"\t⏩\tsent message: {to_json(msg)}")
+        self.producer.flush()
 
 
 class KafkaCheckAction:

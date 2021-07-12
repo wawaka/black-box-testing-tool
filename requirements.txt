@@ -2,3 +2,4 @@ kafka-python
 easybase
 python-dateutil
 pyyaml
+requests

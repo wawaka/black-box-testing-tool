@@ -18,6 +18,7 @@ import struct
 import time
 from pprint import pprint as pp
 
+import requests
 import easybase
 import yaml
 from dateutil.parser import parse
@@ -100,6 +101,21 @@ def format_recursive(fmt, substitutions):
     if type(fmt) is str:
         return fmt.format(**substitutions)
     return fmt
+
+
+class HttpAction:
+    def __init__(self, **kwargs):
+        self.kwargs = kwargs
+
+    def exec(self, kwargs):
+        args = merge(self.kwargs, kwargs)
+        r = requests.post(args['url'], json=args['body'], headers=args.get('headers', {}))
+        if args['expect'] == r.json():
+            print(f"\t✅\treceived response as expected: {args['expect']}")
+        else:
+            print(f"\t❌\treceived response is different from what was expected")
+            print(f"\t\tReceived: {r.json()}")
+            print(f"\t\tExpected: {args['expect']}")
 
 
 class KafkaSendAction:
@@ -305,6 +321,7 @@ ACTIONS = {
     'hbase': HBaseAction,
     'kafka_send': KafkaSendAction,
     'kafka_check': KafkaCheckAction,
+    'http': HttpAction,
 }
 
 

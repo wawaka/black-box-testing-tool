@@ -199,7 +199,10 @@ class KafkaCheckAction:
 
         ignored_text = f" (ignored fields {ignored_keys})" if ignored_keys else ''
         if expected == received:
-            print(f"\t✅\treceived {len(received)} messages as expected{ignored_text}")
+            print(f"\treceived {len(received)} messages as expected{ignored_text}")
+            for msg in received:
+                msg = dictdiff(self.defaults, msg)
+                print(f"\t✅\t{to_json(msg)}")
         else:
             print(f"\t❌\tmessages received are different from what was expected{ignored_text}")
             # raise Exception

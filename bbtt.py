@@ -23,6 +23,7 @@ import easybase
 import yaml
 from dateutil.parser import parse
 from kafka import KafkaConsumer, KafkaProducer
+from kafka.structs import TopicPartition
 
 
 FUNCTION_PREFIX = '$'
@@ -68,6 +69,7 @@ def load_defaults(kwargs):
 
 
 def dictdiff(d1, d2):
+    # print(f"dictdiff({d1}, {d2}")
     diff = {}
     for k2, v2 in d2.items():
         if k2 in d1:
@@ -85,7 +87,9 @@ def poll_until_empty(consumer, timeout_ms):
         if not data:
             return values
         for tp, msgs in data.items():
+            # print(tp)
             for msg in msgs:
+                # print(repr(msg))
                 values.append(json.loads(msg.value))
 
 
@@ -103,6 +107,14 @@ def format_recursive(fmt, substitutions):
     return fmt
 
 
+class IgnoreAction:
+    def __init__(self, **kwargs):
+        return
+
+    def exec(self, kwargs):
+        return
+
+
 class HttpAction:
     def __init__(self, **kwargs):
         self.kwargs = kwargs
@@ -111,11 +123,11 @@ class HttpAction:
         args = merge(self.kwargs, kwargs)
         r = requests.post(args['url'], json=args['body'], headers=args.get('headers', {}))
         if args['expect'] == r.json():
-            print(f"\t✅\treceived response as expected: {args['expect']}")
+            print(f"\t✅\treceived response as expected: {to_json(args['expect'])}")
         else:
             print(f"\t❌\treceived response is different from what was expected")
-            print(f"\t\tReceived: {r.json()}")
-            print(f"\t\tExpected: {args['expect']}")
+            print(f"\t\tReceived: {to_json(r.json())}")
+            print(f"\t\tExpected: {to_json(args['expect'])}")
 
 
 class KafkaSendAction:
@@ -144,6 +156,9 @@ class KafkaSendAction:
 class KafkaCheckAction:
     def __init__(self, **kwargs):
         self.consumer = KafkaConsumer(kwargs['topic'], bootstrap_servers=kwargs['brokers'], **(kwargs.get('kafka_params', {})))
+        # tps = [TopicPartition(kwargs['topic'], p) for p in self.consumer.partitions_for_topic(kwargs['topic'])]
+        # self.consumer.assign(tps)
+        # self.consumer.seek_to_end(*tps)
         self.consumer.poll(1000) # without this line consumer does not actually subscribes for topic and does not start track messages
         self.defaults = load_defaults(kwargs)
         self.consume_timeout = kwargs.get('consume_timeout', 1)
@@ -322,6 +337,7 @@ ACTIONS = {
     'kafka_send': KafkaSendAction,
     'kafka_check': KafkaCheckAction,
     'http': HttpAction,
+    'ignore': IgnoreAction,
 }
 
 

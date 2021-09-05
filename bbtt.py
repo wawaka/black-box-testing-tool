@@ -332,11 +332,154 @@ class HBaseAction:
             else:
                 raise Exception(f"unexpected command type {cmd['type']}")
 
+class HBaseActionBase:
+    def exec(self, kwargs):
+        for cmd in kwargs['commands']:
+            if cmd['type'] == 'put':
+                for rowkey, vs in cmd['rows'].items():
+                    print(f"\t>>>> executing command {cmd['type']!r} for row {rowkey!r}")
+                    if vs is None:
+                        self.delete(rowkey)
+                        print(f"\t🗑\trow {rowkey!r} deleted")
+                    else:
+                        to_put = {}
+                        to_delete = []
+                        for k, v in vs.items():
+                            if v is None:
+                                to_delete.append(k)
+                            else:
+                                to_put[k] = HBaseValueProxy(v)
+
+                        if to_delete:
+                            self.delete(rowkey, to_delete)
+                            print(f"\t🗑\trow {rowkey!r} deleted: {to_delete!r}")
+
+                        if to_put:
+                            self.put(rowkey, to_put)
+                            print(f"\t💾\trow {rowkey!r} put: {to_put!r}")
+
+            elif cmd['type'] == 'check':
+                for rowkey, vs in cmd['rows'].items():
+                    print(f"\t>>>> executing command {cmd['type']!r} for row {rowkey!r}")
+                    if vs is None:
+                        row = self.get(rowkey)
+                        if not row:
+                            print(f"\t✅\trow {rowkey!r}: missing as expected")
+                        else:
+                            print(f"\t❌\trow {rowkey!r}: has value {row!r} (expected missing)")
+                    else:
+                        row = self.get(rowkey, columns=list(vs.keys()))
+                        for k, v in vs.items():
+                            expected_value = HBaseValueProxy(v)
+                            if k in row:
+                                actual_value = HBaseValueProxy(row[k])
+                                if actual_value == expected_value:
+                                    print(f"\t✅\trow {rowkey!r}: key {k!r} has value {actual_value!r} (expected {expected_value!r})")
+                                else:
+                                    print(f"\t❌\trow {rowkey!r}: key {k!r} has value {actual_value!r} (expected {expected_value!r})")
+                            else:
+                                if v is None:
+                                    print(f"\t✅\trow {rowkey!r}: key {k!r} is missing (expected {expected_value!r})")
+                                else:
+                                    print(f"\t❌\trow {rowkey!r}: key {k!r} is missing (expected {expected_value!r})")
+
+            elif cmd['type'] == 'delete':
+                for rowkey in cmd['rows']:
+                    print(f"\t>>>> executing command {cmd['type']!r} for row {rowkey!r}")
+                    self.htable.delete(rowkey)
+                    print(f"\t🗑\trow {rowkey!r} deleted")
+
+            else:
+                raise Exception(f"unexpected command type {cmd['type']}")
+
+
+class EasyBaseAction(HBaseActionBase):
+    def __init__(self, **kwargs):
+        self.connection = easybase.Connection(kwargs['host'])
+        self.htable = self.connection.table(kwargs['table'])
+
+    def put(self, rowkey, values):
+        return self.htable.put(rowkey, values)
+
+    def get(self, rowkey, columns):
+        return self.htable.row(rowkey, columns)
+
+    def delete(self, arg):
+        return self.htable.delete(arg)
+
+
+class THBaseAction(HBaseActionBase):
+    def __init__(self, **kwargs):
+        from thbase.thrift2.client import Client
+        from thbase.config import ClientConfig, TransportType, ProtocolType
+        from thbase.thrift2.operation import Delete, Scan, Put, Get
+        from thbase.thrift2.table import Table
+        from thbase.util.login import LoginEntry
+
+        authentication = None
+        if 'authentication' in kwargs:
+            authentication = LoginEntry(
+                username = kwargs['authentication']['username'],
+                password = kwargs['authentication']['password'],
+                mechanism = kwargs['authentication']['mechanism']
+            )
+
+        config = ClientConfig(
+            thrift_host = kwargs['host'],  # thrift server address type: str
+            port = kwargs.get('port'),  # thrift server port type: int, default 9090
+            retry_times = 10,
+            retry_timeout = 10,  # seconds between two reconnection tries, type: int, default: 10
+            transport_type = TransportType.BUFFERED,
+            protocol_type = ProtocolType.BINARY,
+            use_ssl = True,
+            batch_size = 10,  # The max size of the batch operations
+            use_http = False,
+            authentication = authentication
+        )
+
+        self.client = Client(config)
+        self.client.open_connection()
+
+        self.table = self.client.get_table(kwargs['table'])
+
+    def put(self, rowkey, values):
+        from thbase.thrift2.operation import Delete, Scan, Put, Get
+
+        puts = []
+        for key, value in values.items():
+            family, qualifier = key.split(':', 1)
+            value = value.v.decode('ascii')
+            # print(rowkey, family, qualifier, value)
+            puts.append(Put(row=rowkey, family=family, qualifier=qualifier, value=value))
+        self.table.put_batch(puts)
+
+    def get(self, rowkey, columns):
+        from thbase.thrift2.operation import Delete, Scan, Put, Get
+
+        gets = []
+        for col in columns:
+            family, qualifier = col.split(':', 1)
+            gets.append(Get(row=rowkey, family=family, qualifier=qualifier))
+        # gets = []
+        # result = self.table.get(Get(row=rowkey, family=None, qualifier=None))
+        result = self.table.get_batch(gets)
+
+        values = {(cell.family+b':'+cell.qualifier).decode('ascii'): cell.value for cell in result}
+        print(values)
+        return values
+
+    # def delete(self, rowkey):
+    #     return
+
+
+
 ACTIONS = {
     'sleep': SleepAction,
     'print': PrintAction,
     'pprint': PPrintAction,
     'hbase': HBaseAction,
+    'hbase-easybase': EasyBaseAction,
+    'hbase-thbase': THBaseAction,
     'kafka_send': KafkaSendAction,
     'kafka_check': KafkaCheckAction,
     'http': HttpAction,

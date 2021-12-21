@@ -121,12 +121,29 @@ class HttpAction:
 
     def exec(self, kwargs):
         args = merge(self.kwargs, kwargs)
-        r = requests.post(args['url'], json=args['body'], headers=args.get('headers', {}))
-        if args['expect'] == r.json():
+
+        requests_kwargs = {
+            'headers': args.get('headers', {}),
+            'params': args.get('params', {}),
+        }
+
+        if type(args['body']) is str:
+            requests_kwargs['data'] = args['body']
+        else:
+            requests_kwargs['json'] = args['body']
+
+        r = requests.request(args['method'], args['url'], **requests_kwargs)
+
+        if type(args['expect']) is str:
+            actual = r.content.decode('utf8')
+        else:
+            actual = r.json()
+
+        if args['expect'] == actual:
             print(f"\t✅\treceived response as expected: {to_json(args['expect'])}")
         else:
             print(f"\t❌\treceived response is different from what was expected")
-            print(f"\t\tReceived: {to_json(r.json())}")
+            print(f"\t\tReceived: {to_json(actual)}")
             print(f"\t\tExpected: {to_json(args['expect'])}")
 
 
@@ -612,6 +629,9 @@ def load_configs(paths):
         'functions': {},
         'constants': {},
         'actions': {
+            'http': {
+                'type': 'http'
+            },
             'sleep': {
                 'type': 'sleep',
                 'time': 1,
